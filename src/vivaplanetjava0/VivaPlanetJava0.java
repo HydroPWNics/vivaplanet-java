@@ -224,7 +224,7 @@ public class VivaPlanetJava0
             String cToken =  createToken(resourceUri, keyName, key);
             System.out.println("Token: " + cToken);
                 
-            sbRequest.setRequestProperty("Authorization", "SharedAccessSignature sr=https%3a%2f%2fvivaplanetbusservicedev.servicebus.windows.net%2fhummingbirdqueue%2fmessages&sig=0RByEqg1Hm3xpoG5qBLpg5OIROfDl5lnMJiczNMVldM%3d&se=1440741656&skn=DevicePolicy");
+            sbRequest.setRequestProperty("Authorization", cToken);
 
             //send post request
             sbRequest.setDoOutput(true);
@@ -267,40 +267,36 @@ public class VivaPlanetJava0
         String charset = "UTF-8"; 
         String sasToken = null;
         Calendar currentTime = Calendar.getInstance(Locale.ENGLISH);
-        String expiry = String.valueOf(currentTime.getTimeInMillis()/1000 + 3600 );
+        String expiry = "1440710529"; //String.valueOf(currentTime.getTimeInMillis()/1000 + 3600 );
         System.out.println("Time:" + expiry.toString());
         
         try
         {
             String stringToSign = java.net.URLEncoder.encode(resourceUri, charset) + expiry.toString();
+            byte[] bStringToSign = stringToSign.getBytes(charset);
+            
             System.out.println("strToSgn:" + stringToSign);
             
             byte[] bKey = key.getBytes(charset);
             System.out.println("bKey:" + new String(bKey, charset));
            
-            //SecretKeySpec signingKey = new SecretKeySpec(secretKey,"HmacSHA2526");
-    
             Mac hMac = Mac.getInstance("HmacSHA256");            
-            SecretKeySpec signature = new SecretKeySpec(bKey, "HmacSHA256");
-            hMac.init(signature);
-            System.out.println("Signature:" + signature.toString());
-           
-  
-            byte[] bStringToSign = stringToSign.getBytes(charset);
-            byte[] hStringToSign = hMac.doFinal(bStringToSign);
-            String hhStringToSign = org.apache.commons.codec.binary.Base64.encodeBase64String(hStringToSign);
-            System.out.println("Tru:" + hhStringToSign);
-            
-           // byte[] keyname_inBytes = keyName.getBytes(charset);
+            SecretKeySpec seed = new SecretKeySpec(bStringToSign, "HmacSHA256");
+            hMac.init(seed);
 
-         // byte[] hmac_pre = sha256_HMAC.doFinal(keyname_inBytes);
-//            String signature = bytesToHex(hmac_pre);
+           // System.out.println("seed:" + new String(seed, charset));
+           
+            byte[] hStringToSign = hMac.doFinal(bStringToSign);
+            System.out.println("hmac:" + new String(hStringToSign, charset));
+            String signature = org.apache.commons.codec.binary.Base64.encodeBase64String(hStringToSign);
+            System.out.println("signature:" + signature);
 
             sasToken = String.format(Locale.getDefault(), 
                                            "SharedAccessSignature sr=%s&sig=%s&se=%s&skn=%s", 
                                            java.net.URLEncoder.encode(resourceUri,charset),
-                                           java.net.URLEncoder.encode(hhStringToSign, charset), 
-                                           expiry, keyName);
+                                           java.net.URLEncoder.encode(signature, charset), 
+                                           expiry, 
+                                           keyName);
         }
         catch(Exception ex) 
         {
