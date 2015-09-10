@@ -216,23 +216,23 @@ public class VivaPlanetJava0
             
             //add request header
             sbRequest.setRequestMethod("POST"); // Triggers POST.
+            
             //will expire after 1 hour...
             String resourceUri = "https://vivaplanetbusservicedev.servicebus.windows.net/hummingbirdqueue/messages";
             String keyName = "DevicePolicy";
-            String key = "YOMfbmtih/oEERPw3u3ha2wazXR0N2uSFsN61+cKjpM=";
+            String key = "YOMfbmtih/oEERPw3u3ha2wazXR0N2uSFsN61+cKjpM=";            
+            //generate the token
+            String cToken = createToken(resourceUri, keyName, key);
             
-            String cToken =  createToken(resourceUri, keyName, key);
-            System.out.println("Token: " + cToken);
-                
+            System.out.println("Token: " + cToken); 
+            
             sbRequest.setRequestProperty("Authorization", cToken);
 
             //send post request
             sbRequest.setDoOutput(true);
             DataOutputStream output = new DataOutputStream(sbRequest.getOutputStream());
             
-            //OutputStream output = sbRequest.getOutputStream();
             String body = gson.toJson(device); 
-            //byte[] bytes = Encoding.UTF8.GetBytes(body);
             
             output.write(body.getBytes(charset));
             output.flush();
@@ -264,37 +264,35 @@ public class VivaPlanetJava0
     
     private static String createToken(String resourceUri, String keyName, String key)
     {
+
         String charset = "UTF-8"; 
         String sasToken = null;
         Calendar currentTime = Calendar.getInstance(Locale.ENGLISH);
-        String expiry = "1440710529"; //String.valueOf(currentTime.getTimeInMillis()/1000 + 3600 );
-        System.out.println("Time:" + expiry.toString());
+        String expiry = String.valueOf(currentTime.getTimeInMillis()/1000 + 3600 );
+        System.out.println("expiry:" + expiry.toString());
         
         try
         {
-            String stringToSign = java.net.URLEncoder.encode(resourceUri, charset) + expiry.toString();
-            byte[] bStringToSign = stringToSign.getBytes(charset);
-            
+            String stringToSign = java.net.URLEncoder.encode(resourceUri, charset).toLowerCase() + "\n" + expiry.toString();
+            byte[] bStringToSign = stringToSign.getBytes(charset);            
             System.out.println("strToSgn:" + stringToSign);
             
-            byte[] bKey = key.getBytes(charset);
-            System.out.println("bKey:" + new String(bKey, charset));
-           
-            Mac hMac = Mac.getInstance("HmacSHA256");            
-            SecretKeySpec seed = new SecretKeySpec(bStringToSign, "HmacSHA256");
-            hMac.init(seed);
-
-           // System.out.println("seed:" + new String(seed, charset));
-           
-            byte[] hStringToSign = hMac.doFinal(bStringToSign);
-            System.out.println("hmac:" + new String(hStringToSign, charset));
-            String signature = org.apache.commons.codec.binary.Base64.encodeBase64String(hStringToSign);
-            System.out.println("signature:" + signature);
-
+            byte[] secretKey = key.getBytes();
+            SecretKeySpec signingKey = new SecretKeySpec(secretKey, "HmacSHA256");
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(signingKey);
+            byte[] bytes = stringToSign.getBytes();
+            byte[] rawHmac = mac.doFinal(bytes);
+            String result = Base64.encode(rawHmac);
+            System.out.println("result:" + result);
+            
+            String httpEncodedResourceURI = LowerCaseUrlEncode(resourceUri);
+            String httpEncodedSignature = LowerCaseUrlEncode(result); 
+            
             sasToken = String.format(Locale.getDefault(), 
                                            "SharedAccessSignature sr=%s&sig=%s&se=%s&skn=%s", 
-                                           java.net.URLEncoder.encode(resourceUri,charset),
-                                           java.net.URLEncoder.encode(signature, charset), 
+                                           httpEncodedResourceURI, 
+                                           httpEncodedSignature, 
                                            expiry, 
                                            keyName);
         }
@@ -305,16 +303,30 @@ public class VivaPlanetJava0
         
         return sasToken;
     }
-    final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
-    public static String bytesToHex(byte[] bytes) 
+    
+    public static String LowerCaseUrlEncode(String s)
     {
-        char[] hexChars = new char[bytes.length * 2];
-        for ( int j = 0; j < bytes.length; j++ ) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = hexArray[v >>> 4];
-            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        String charset = "UTF-8"; 
+        try
+        {
+            char[] temp = java.net.URLEncoder.encode(s, charset).toCharArray();
+
+            for (int i = 0; i < temp.length; i++)
+            {
+                if (temp[i] == '%')
+                {
+                    temp[i + 1] = Character.toLowerCase(temp[i + 1]);
+                    temp[i + 2] = Character.toLowerCase(temp[i + 2]);
+                }
+            }
+            return new String(temp);
+        }
+        catch(Exception ex) 
+        {
+               System.out.println("Error 8: " + ex.toString());        
         }
         
-        return new String(hexChars);
+        return null;
+        
     }
 }
