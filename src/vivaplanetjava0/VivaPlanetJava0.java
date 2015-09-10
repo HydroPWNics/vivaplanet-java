@@ -8,10 +8,12 @@
 
 package vivaplanetjava0;
 
+import java.io.BufferedWriter;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -145,6 +147,7 @@ public class VivaPlanetJava0
                // put java locking code here and also cleanup code
         }
     }
+    
     public static String DeviceSerialNumer = "17564321";
     private static DeviceReport getDeviceReport(DeviceReport vDeviceReport)
     {
@@ -241,19 +244,20 @@ public class VivaPlanetJava0
             int responseCode = sbRequest.getResponseCode();
             System.out.println("\nSending 'POST' request to URL : " + iurl);
 
-            System.out.println("Response Code : " + responseCode);
-
+            writeResponse(responseCode);
+                    
             BufferedReader in = new BufferedReader(new InputStreamReader(sbRequest.getInputStream()));
             String inputLine;
             StringBuffer response = new StringBuffer();
 
-            while ((inputLine = in.readLine()) != null) {
+            while ((inputLine = in.readLine()) != null) 
+            {
                     response.append(inputLine);
             }
             in.close();
 
             //print result
-            System.out.println(response.toString());
+            System.out.println("Result:" + response.toString());
 
         }
         catch (Exception ex)
@@ -261,6 +265,30 @@ public class VivaPlanetJava0
             System.out.println("Error 7: " + ex.toString());
         }
     }
+    private static void writeResponse(int response)
+    {
+        File file = new File("C:\\Users\\Shane\\Desktop\\response.txt"); //change this...
+        BufferedWriter writer = null;
+
+        try 
+        {
+            writer = new BufferedWriter(new FileWriter(file));
+            
+            writer.write(String.valueOf(response));
+            
+            System.out.println("Response Code : " + response);
+            writer.close();
+        } 
+        catch (FileNotFoundException e) 
+        {
+            e.printStackTrace();
+        } 
+        catch (IOException e) 
+        {
+            e.printStackTrace();
+        } 
+    }
+    
     
     private static String createToken(String resourceUri, String keyName, String key)
     {
